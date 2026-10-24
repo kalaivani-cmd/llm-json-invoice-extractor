@@ -1,38 +1,63 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InvoiceAI | Smart Invoice Extraction</title>
+
+    <title>InvoiceAI | LLM JSON Invoice Extractor</title>
+
+    <meta
+        name="description"
+        content="Extract, validate, and structure invoice data using a locally hosted AI model."
+    >
 
     <style>
+        /* =========================
+           GLOBAL STYLES
+        ========================= */
+
         :root {
-            --navy: #111827;
-            --navy-light: #1f2937;
-            --blue: #4f46e5;
-            --blue-hover: #4338ca;
-            --purple: #7c3aed;
-            --bg: #f5f7fb;
-            --white: #ffffff;
-            --text: #182230;
+            --primary: #635bff;
+            --primary-dark: #5046e5;
+            --background: #f5f7fb;
+            --surface: #ffffff;
+            --text: #172033;
             --muted: #718096;
             --border: #e5e9f2;
-            --green: #059669;
+            --success: #138a58;
+            --danger: #c0394b;
+            --radius: 16px;
+            --shadow: 0 8px 30px rgba(31, 41, 55, 0.05);
+        }
+
+        [hidden] {
+            display: none !important;
         }
 
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            margin: 0;
-            font-family: Inter, "Segoe UI", Arial, sans-serif;
-            background: var(--bg);
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            background: var(--background);
             color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
         }
 
-        button, textarea, input {
+        button,
+        textarea,
+        input {
             font: inherit;
         }
 
@@ -40,924 +65,1165 @@
             cursor: pointer;
         }
 
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
         .app {
-            display: flex;
+            max-width: 1440px;
+            margin: auto;
             min-height: 100vh;
         }
 
-        /* Sidebar */
+        /* =========================
+           HEADER
+        ========================= */
 
-        .sidebar {
-            width: 245px;
-            flex-shrink: 0;
-            background: var(--navy);
-            color: white;
-            padding: 26px 16px;
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 18px 5%;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
         }
 
         .brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 0 10px 32px;
         }
 
         .brand-icon {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
+            border-radius: 13px;
+            background: var(--primary);
+            color: white;
             display: grid;
             place-items: center;
-            border-radius: 13px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
             font-size: 23px;
+            font-weight: 800;
         }
 
-        .brand-name {
-            font-size: 19px;
-            font-weight: 750;
+        .brand h1 {
+            font-size: 20px;
             letter-spacing: -0.5px;
         }
 
-        .brand-subtitle {
-            font-size: 11px;
-            color: #a5b4fc;
-            margin-top: 4px;
+        .brand p {
+            color: var(--muted);
+            font-size: 12px;
         }
 
-        .nav-label {
-            padding: 0 12px;
-            margin: 8px 0 12px;
-            color: #8792a5;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 13px 14px;
-            margin-bottom: 6px;
-            color: #cbd5e1;
-            text-decoration: none;
-            border-radius: 9px;
-            font-size: 14px;
-            transition: 0.2s;
-        }
-
-        .nav-item:hover {
-            background: #263247;
-            color: white;
-        }
-
-        .nav-item.active {
-            background: #3730a3;
-            color: white;
-        }
-
-        .nav-icon {
-            width: 21px;
-            text-align: center;
-            font-size: 17px;
-        }
-
-        .sidebar-bottom {
-            margin-top: auto;
-            padding: 17px 13px;
-            border: 1px solid #374151;
-            border-radius: 12px;
-            background: #192334;
-        }
-
-        .local-status {
-            display: flex;
+        .local-badge {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 12px;
-            color: #d1d5db;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            background: #34d399;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .sidebar-note {
-            color: #94a3b8;
-            font-size: 11px;
-            line-height: 1.6;
-            margin-top: 10px;
-        }
-
-        /* Main workspace */
-
-        .workspace {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .topbar {
-            height: 76px;
-            background: white;
-            border-bottom: 1px solid var(--border);
-            padding: 0 36px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-        }
-
-        .breadcrumb {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .breadcrumb strong {
-            color: var(--text);
-        }
-
-        .profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            color: #4338ca;
-            background: #e0e7ff;
-            font-weight: 700;
-        }
-
-        .content {
-            max-width: 1450px;
-            padding: 32px 36px 45px;
-            margin: auto;
-        }
-
-        .welcome {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 26px;
-        }
-
-        .welcome h1 {
-            margin: 0 0 9px;
-            font-size: clamp(24px, 3vw, 31px);
-            letter-spacing: -1px;
-        }
-
-        .welcome p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .badge {
-            background: #ede9fe;
-            color: #6d28d9;
+            padding: 8px 13px;
+            background: #eaf8f0;
+            border: 1px solid #d1efdc;
             border-radius: 30px;
-            padding: 9px 13px;
+            color: #17794c;
             font-size: 12px;
-            font-weight: 650;
+            font-weight: 700;
             white-space: nowrap;
         }
 
-        /* Statistics */
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 18px;
-            margin-bottom: 28px;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #20ad69;
         }
 
-        .stat-card {
-            padding: 21px;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.025);
+        /* =========================
+           MAIN CONTENT
+        ========================= */
+
+        .main {
+            padding: 45px 5% 60px;
         }
 
-        .stat-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            color: var(--muted);
+        .hero {
+            margin-bottom: 35px;
+        }
+
+        .eyebrow {
+            color: var(--primary);
             font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
         }
 
-        .stat-icon {
-            width: 37px;
-            height: 37px;
-            display: grid;
-            place-items: center;
-            border-radius: 10px;
-            font-size: 18px;
+        .hero h2 {
+            font-size: clamp(30px, 4vw, 42px);
+            line-height: 1.2;
+            letter-spacing: -1.5px;
+            margin-bottom: 14px;
         }
 
-        .stat-icon.blue {
-            background: #e0e7ff;
-        }
-
-        .stat-icon.purple {
-            background: #f3e8ff;
-        }
-
-        .stat-icon.green {
-            background: #d1fae5;
-        }
-
-        .stat-number {
-            font-size: 27px;
-            font-weight: 750;
-            letter-spacing: -0.7px;
-            margin-top: 16px;
-        }
-
-        .stat-caption {
+        .hero p {
+            max-width: 700px;
             color: var(--muted);
-            font-size: 11px;
-            margin-top: 6px;
+            font-size: 15px;
         }
 
-        /* Cards and extraction forms */
-
-        .section-heading {
+        .feature-row {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
         }
 
-        .section-heading h2 {
-            margin: 0;
-            font-size: 18px;
+        .feature-chip {
+            padding: 7px 12px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #536078;
         }
 
-        .section-heading p {
-            margin: 6px 0 0;
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.5;
-        }
+        /* =========================
+           WORKSPACE GRID
+        ========================= */
 
-        .workspace-grid {
+        .workspace {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 20px;
+            gap: 24px;
             align-items: start;
         }
 
         .card {
-            background: white;
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 23px;
-            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.025);
-            min-width: 0;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
         }
 
-        .card-title {
+        .card-header {
+            padding: 22px 24px;
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 11px;
-            margin-bottom: 19px;
+            justify-content: space-between;
+            gap: 15px;
         }
 
-        .card-title-icon {
-            width: 43px;
-            height: 43px;
+        .card-header h3 {
+            font-size: 17px;
+            letter-spacing: -0.3px;
+        }
+
+        .card-header p {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .step-number {
             display: grid;
             place-items: center;
-            border-radius: 11px;
-            background: #eef2ff;
-            font-size: 21px;
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background: #efedff;
+            color: var(--primary);
+            font-weight: 800;
         }
 
-        .card-title h3 {
-            font-size: 15px;
-            margin: 0 0 5px;
+        .card-body {
+            padding: 24px;
         }
 
-        .card-title p {
-            color: var(--muted);
-            font-size: 11px;
-            margin: 0;
+        /* =========================
+           TABS
+        ========================= */
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            background: #f4f5f9;
+            padding: 5px;
+            border-radius: 10px;
+            margin-bottom: 22px;
         }
 
-        label {
+        .tab {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px;
+            border-radius: 7px;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* =========================
+           FORM ELEMENTS
+        ========================= */
+
+        .form-label {
             display: block;
-            font-size: 12px;
-            font-weight: 650;
+            font-size: 13px;
+            font-weight: 700;
             margin-bottom: 9px;
         }
 
         textarea {
-            display: block;
             width: 100%;
-            min-height: 220px;
-            padding: 14px;
-            border: 1px solid #dce2ec;
-            border-radius: 9px;
-            outline: none;
+            min-height: 230px;
             resize: vertical;
-            font-family: Consolas, monospace;
-            font-size: 12px;
-            line-height: 1.8;
-            color: #334155;
+            padding: 16px;
+            border: 1px solid #dce2ed;
+            border-radius: 11px;
             background: #fcfdff;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.9;
+            outline: none;
             transition: border 0.2s, box-shadow 0.2s;
         }
 
-        textarea:focus,
-        input:focus {
-            border-color: #818cf8;
-            box-shadow: 0 0 0 3px #e0e7ff;
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.1);
         }
 
-        .hint {
-            font-size: 11px;
+        .helper-text {
+            margin-top: 8px;
             color: var(--muted);
-            line-height: 1.6;
-            margin-top: 9px;
+            font-size: 12px;
         }
 
-        .primary-btn {
-            width: 100%;
-            border: none;
-            border-radius: 9px;
-            background: var(--blue);
-            color: white;
-            padding: 13px 16px;
-            margin-top: 17px;
-            font-size: 13px;
-            font-weight: 650;
-            transition: background 0.2s;
-        }
-
-        .primary-btn:hover {
-            background: var(--blue-hover);
-        }
-
-        .primary-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .secondary-btn {
-            border: 1px solid #dbe1eb;
-            border-radius: 7px;
-            background: white;
-            color: #334155;
-            padding: 8px 11px;
-            font-size: 11px;
-            font-weight: 650;
-        }
-
-        .secondary-btn:hover {
-            background: #f8fafc;
-        }
-
-        /* PDF upload */
-
-        .drop-zone {
-            min-height: 220px;
-            border: 1.5px dashed #b8c2d6;
-            border-radius: 11px;
-            background: #fafbff;
+        .button-row {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 22px;
+            gap: 8px;
+            padding: 12px 17px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #536078;
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #f8f9fc;
+        }
+
+        /* =========================
+           PDF UPLOAD
+        ========================= */
+
+        .pdf-panel {
+            display: none;
+        }
+
+        .drop-zone {
+            border: 2px dashed #d6dced;
+            border-radius: 13px;
+            padding: 35px 20px;
             text-align: center;
+            background: #fafbff;
             transition: 0.2s;
         }
 
         .drop-zone.dragover {
-            background: #eef2ff;
-            border-color: var(--blue);
+            border-color: var(--primary);
+            background: #f1f0ff;
         }
 
         .upload-icon {
-            width: 56px;
-            height: 56px;
+            width: 55px;
+            height: 55px;
             display: grid;
             place-items: center;
+            margin: 0 auto 15px;
             border-radius: 15px;
-            background: #e0e7ff;
-            color: #4338ca;
-            font-size: 27px;
-            margin-bottom: 15px;
+            background: #efedff;
+            color: var(--primary);
+            font-size: 25px;
         }
 
-        .drop-title {
-            font-weight: 700;
-            font-size: 13px;
-            margin-bottom: 8px;
+        .drop-zone h4 {
+            font-size: 15px;
+            margin-bottom: 5px;
         }
 
-        .drop-description {
-            font-size: 11px;
+        .drop-zone p {
             color: var(--muted);
-            line-height: 1.6;
-        }
-
-        .choose-btn {
-            margin-top: 15px;
-            background: white;
-            border: 1px solid #c7d2fe;
-            color: #4338ca;
-            border-radius: 7px;
-            padding: 9px 15px;
             font-size: 12px;
-            font-weight: 650;
-        }
-
-        .choose-btn:hover {
-            background: #eef2ff;
-        }
-
-        #pdfFile {
-            display: none;
+            margin-bottom: 16px;
         }
 
         .selected-file {
-            margin-top: 12px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            background: #f1f5f9;
-            font-size: 11px;
-            overflow-wrap: anywhere;
             display: none;
-        }
-
-        /* Results */
-
-        .results-section {
-            margin-top: 26px;
-        }
-
-        .results-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            overflow: hidden;
-        }
-
-        .results-header {
-            padding: 20px 23px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .results-header h3 {
-            font-size: 15px;
-            margin: 0 0 5px;
-        }
-
-        .results-header p {
-            font-size: 11px;
-            color: var(--muted);
-            margin: 0;
-        }
-
-        .json-label {
-            color: #4338ca;
-            background: #eef2ff;
-            padding: 7px 10px;
-            border-radius: 6px;
-            font-family: Consolas, monospace;
-            font-size: 11px;
-        }
-
-        .result-status {
-            padding: 12px 23px 0;
-            color: var(--muted);
+            margin-top: 15px;
+            padding: 11px;
+            border-radius: 8px;
+            background: #effaf4;
+            color: var(--success);
             font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        /* =========================
+           STATUS MESSAGES
+        ========================= */
+
+        .status-message {
+            display: none;
+            margin-top: 18px;
+            padding: 13px 15px;
+            border-radius: 9px;
+            font-size: 13px;
             line-height: 1.6;
             overflow-wrap: anywhere;
+            white-space: pre-wrap;
         }
 
-        .result-body {
-            padding: 16px 23px 23px;
+        .status-message.success {
+            display: block;
+            color: #176b43;
+            background: #edfaf2;
+            border: 1px solid #d2f0dd;
+        }
+
+        .status-message.error {
+            display: block;
+            color: #a52839;
+            background: #fff1f2;
+            border: 1px solid #ffdadd;
+        }
+
+        .status-message.info {
+            display: block;
+            color: #5145ba;
+            background: #f2f0ff;
+            border: 1px solid #e0dcff;
+        }
+
+        /* =========================
+           RESULTS
+        ========================= */
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .format-badge {
+            background: #f0efff;
+            color: var(--primary);
+            padding: 6px 9px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
         }
 
         .empty-state {
-            padding: 20px;
-            border: 1px dashed #dce2ec;
-            border-radius: 9px;
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.8;
+            padding: 55px 20px;
             text-align: center;
         }
 
-        .empty-state span {
-            display: block;
-            font-size: 25px;
-            margin-bottom: 8px;
+        .empty-icon {
+            width: 65px;
+            height: 65px;
+            margin: 0 auto 18px;
+            display: grid;
+            place-items: center;
+            border-radius: 18px;
+            background: #f1f2f8;
+            color: #8b94aa;
+            font-size: 28px;
         }
 
-        .json-output {
-            margin: 0;
-            padding: 18px;
-            background: #101827;
-            color: #c4b5fd;
-            border-radius: 9px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-            font-family: Consolas, monospace;
+        .empty-state h4 {
+            font-size: 16px;
+            margin-bottom: 7px;
+        }
+
+        .empty-state p {
+            max-width: 280px;
+            margin: auto;
+            color: var(--muted);
             font-size: 12px;
-            line-height: 1.9;
-            display: none;
         }
 
         .field-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
-            margin-bottom: 16px;
         }
 
         .field-item {
-            background: #f8fafc;
-            border: 1px solid #edf0f5;
-            border-radius: 8px;
-            padding: 13px;
+            padding: 15px;
+            background: #fafbfe;
+            border: 1px solid var(--border);
+            border-radius: 10px;
             min-width: 0;
         }
 
+        .field-item:last-child:nth-child(odd) {
+            grid-column: 1 / -1;
+        }
+
         .field-label {
-            font-size: 10px;
             color: var(--muted);
+            font-size: 11px;
             margin-bottom: 7px;
         }
 
         .field-value {
-            font-size: 13px;
-            font-weight: 700;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 750;
             overflow-wrap: anywhere;
         }
 
-        .footer {
-            padding-top: 28px;
+        .json-section {
+            margin-top: 25px;
+        }
+
+        .json-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .json-heading h4 {
+            font-size: 13px;
+        }
+
+        .json-heading span {
+            font-size: 10px;
             color: var(--muted);
-            text-align: center;
+        }
+
+        .json-output {
+            display: none;
+            max-height: 340px;
+            overflow: auto;
+            padding: 18px;
+            border-radius: 11px;
+            background: #151b2b;
+            color: #c8d5f2;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.9;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .result-actions .btn {
+            flex: 1;
+        }
+
+        /* =========================
+           PROCESS EXPLANATION
+        ========================= */
+
+        .info-section {
+            margin-top: 28px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 15px;
+        }
+
+        .info-card {
+            padding: 19px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .info-card .icon {
+            font-size: 21px;
+            margin-bottom: 10px;
+        }
+
+        .info-card h4 {
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .info-card p {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        .footer {
+            padding: 25px 5%;
+            border-top: 1px solid var(--border);
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+            color: var(--muted);
             font-size: 11px;
-            line-height: 1.8;
         }
 
-        /* Responsive layout */
+        /* =========================
+           RESPONSIVE DESIGN
+        ========================= */
 
-        @media (max-width: 1050px) {
-            .sidebar {
-                width: 205px;
+        @media (max-width: 900px) {
+            .workspace {
+                grid-template-columns: 1fr;
             }
 
-            .content {
-                padding: 26px 22px 35px;
-            }
-
-            .topbar {
-                padding: 0 22px;
-            }
-
-            .workspace-grid {
+            .info-section {
                 grid-template-columns: 1fr;
             }
         }
 
-        @media (max-width: 650px) {
-            .app {
-                display: block;
+        @media (max-width: 550px) {
+            .header {
+                padding: 15px 4%;
             }
 
-            .sidebar {
-                width: 100%;
-                padding: 15px;
+            .brand h1 {
+                font-size: 16px;
             }
 
-            .brand {
-                padding: 0 5px 15px;
+            .local-badge {
+                font-size: 10px;
+                padding: 7px;
             }
 
-            .nav-label,
-            .sidebar-bottom {
-                display: none;
+            .main {
+                padding: 30px 4%;
             }
 
-            .sidebar nav {
-                display: flex;
-                gap: 6px;
-                overflow-x: auto;
-            }
-
-            .nav-item {
-                flex-shrink: 0;
-                padding: 10px;
-                margin: 0;
-                font-size: 12px;
-            }
-
-            .topbar {
-                height: 58px;
-                padding: 0 16px;
-            }
-
-            .content {
-                padding: 24px 14px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            .stat-card {
-                padding: 17px;
-            }
-
-            .welcome {
-                flex-direction: column;
-            }
-
-            .card {
+            .card-header,
+            .card-body {
                 padding: 17px;
             }
 
             .field-grid {
                 grid-template-columns: 1fr;
             }
+
+            .field-item:last-child:nth-child(odd) {
+                grid-column: auto;
+            }
+
+            .hero h2 {
+                font-size: 30px;
+            }
         }
     </style>
 </head>
 
 <body>
+
 <div class="app">
 
-    <aside class="sidebar">
+    <!-- HEADER -->
+
+    <header class="header">
+
         <div class="brand">
-            <div class="brand-icon">✦</div>
+
+            <div class="brand-icon">I</div>
+
             <div>
-                <div class="brand-name">InvoiceAI</div>
-                <div class="brand-subtitle">INTELLIGENT EXTRACTION</div>
+                <h1>InvoiceAI</h1>
+                <p>LLM JSON Invoice Extractor</p>
             </div>
+
         </div>
 
-        <div class="nav-label">WORKSPACE</div>
-
-        <nav>
-            <a class="nav-item active" href="#dashboard">
-                <span class="nav-icon">▦</span> Dashboard
-            </a>
-            <a class="nav-item" href="#text-extraction">
-                <span class="nav-icon">▤</span> Text Extraction
-            </a>
-            <a class="nav-item" href="#pdf-extraction">
-                <span class="nav-icon">⇧</span> PDF Upload
-            </a>
-            <a class="nav-item" href="#results">
-                <span class="nav-icon">{ }</span> JSON Results
-            </a>
-        </nav>
-
-        <div class="sidebar-bottom">
-            <div class="local-status">
-                <span class="dot"></span>
-                Local AI workflow
-            </div>
-            <div class="sidebar-note">
-                Powered by your FastAPI backend and local Ollama model.
-            </div>
+        <div class="local-badge">
+            <span class="status-dot"></span>
+            Local AI Processing
         </div>
-    </aside>
 
-    <div class="workspace">
-        <header class="topbar">
-            <div class="breadcrumb">Workspace / <strong>Dashboard</strong></div>
-            <div class="profile">
-                <div class="avatar">AI</div>
-                <span>Invoice Assistant</span>
+    </header>
+
+
+    <!-- MAIN -->
+
+    <main class="main">
+
+        <section class="hero">
+
+            <div class="eyebrow">
+                AI-Powered Document Intelligence
             </div>
-        </header>
 
-        <main class="content" id="dashboard">
-            <section class="welcome">
-                <div>
-                    <h1>Invoice Extraction Dashboard</h1>
-                    <p>
-                        Turn unstructured invoices into clean, validated JSON
-                        using your local AI model.
-                    </p>
-                </div>
-                <div class="badge">✦ AI Powered</div>
-            </section>
+            <h2>
+                Turn invoices into<br>
+                structured data.
+            </h2>
 
-            <section class="stats">
-                <div class="stat-card">
-                    <div class="stat-top">
-                        Extraction Methods
-                        <div class="stat-icon blue">⇄</div>
-                    </div>
-                    <div class="stat-number">02</div>
-                    <div class="stat-caption">Text input and PDF upload</div>
-                </div>
+            <p>
+                Extract important invoice information from text or PDF
+                documents using a locally hosted language model.
+                Validate the results and get clean JSON ready for
+                your applications.
+            </p>
 
-                <div class="stat-card">
-                    <div class="stat-top">
-                        Output Format
-                        <div class="stat-icon purple">{ }</div>
-                    </div>
-                    <div class="stat-number">JSON</div>
-                    <div class="stat-caption">Structured and validated data</div>
-                </div>
+            <div class="feature-row">
 
-                <div class="stat-card">
-                    <div class="stat-top">
-                        AI Processing
-                        <div class="stat-icon green">✦</div>
-                    </div>
-                    <div class="stat-number">Local</div>
-                    <div class="stat-caption">Using your installed Ollama model</div>
-                </div>
-            </section>
+                <span class="feature-chip">✓ Local Ollama AI</span>
 
-            <section>
-                <div class="section-heading">
+                <span class="feature-chip">✓ Pydantic Validation</span>
+
+                <span class="feature-chip">✓ Text & PDF Support</span>
+
+                <span class="feature-chip">✓ JSON Output</span>
+
+            </div>
+
+        </section>
+
+
+        <!-- WORKSPACE -->
+
+        <section class="workspace">
+
+            <!-- INPUT CARD -->
+
+            <div class="card">
+
+                <div class="card-header">
+
                     <div>
-                        <h2>Extract Invoice Data</h2>
-                        <p>Choose your preferred method to get started.</p>
+                        <h3>Invoice Input</h3>
+                        <p>Provide your invoice data</p>
                     </div>
+
+                    <div class="step-number">01</div>
+
                 </div>
 
-                <div class="workspace-grid">
 
-                    <!-- Text extraction -->
-                    <section class="card" id="text-extraction">
-                        <div class="card-title">
-                            <div class="card-title-icon">▤</div>
-                            <div>
-                                <h3>Extract from Text</h3>
-                                <p>Paste invoice details</p>
-                            </div>
-                        </div>
+                <div class="card-body">
 
-                        <label for="invoiceText">Invoice content</label>
+                    <!-- INPUT TABS -->
+
+                    <div class="tabs">
+
+                        <button
+                            type="button"
+                            class="tab active"
+                            id="textTab"
+                        >
+                            Text Invoice
+                        </button>
+
+                        <button
+                            type="button"
+                            class="tab"
+                            id="pdfTab"
+                        >
+                            PDF Upload
+                        </button>
+
+                    </div>
+
+
+                    <!-- TEXT PANEL -->
+
+                    <section id="textPanel">
+
+                        <label
+                            for="invoiceText"
+                            class="form-label"
+                        >
+                            Invoice Content
+                        </label>
+
                         <textarea
                             id="invoiceText"
-                            placeholder="Invoice Number: INV-1004&#10;Customer Name: Green Valley Systems&#10;Total Amount: 18750.50&#10;Currency: INR&#10;Due Date: 2026-12-20"
+                            placeholder="Enter your invoice text here..."
                         ></textarea>
 
-                        <div class="hint">
-                            Paste invoice text containing the details you want to extract.
+                        <p class="helper-text">
+                            Enter the invoice details in natural language.
+                            All five required fields should be available.
+                        </p>
+
+                        <div class="button-row">
+
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                id="textButton"
+                            >
+                                ✦ Extract Invoice
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                id="sampleButton"
+                            >
+                                Load Sample
+                            </button>
+
                         </div>
 
-                        <button class="primary-btn" id="extractButton" type="button">
-                            ✦ &nbsp; Extract Invoice Data
-                        </button>
                     </section>
 
-                    <!-- PDF upload -->
-                    <section class="card" id="pdf-extraction">
-                        <div class="card-title">
-                            <div class="card-title-icon">⇧</div>
-                            <div>
-                                <h3>Upload Invoice PDF</h3>
-                                <p>Extract data from a PDF document</p>
-                            </div>
-                        </div>
 
-                        <div class="drop-zone" id="dropZone">
-                            <div class="upload-icon">⇧</div>
-                            <div class="drop-title">Drop your invoice PDF here</div>
-                            <div class="drop-description">
-                                Or choose a file from your computer.<br>
-                                Text-based PDF files only in this version.
-                            </div>
+                    <!-- PDF PANEL -->
+
+                    <section id="pdfPanel" class="pdf-panel">
+
+                        <label class="form-label">
+                            Upload Invoice PDF
+                        </label>
+
+                        <div
+                            class="drop-zone"
+                            id="dropZone"
+                        >
+
+                            <div class="upload-icon">↑</div>
+
+                            <h4>Drop your PDF invoice here</h4>
+
+                            <p>
+                                Or select a PDF from your computer
+                            </p>
+
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                id="chooseFileButton"
+                            >
+                                Choose PDF
+                            </button>
 
                             <input
                                 type="file"
-                                id="pdfFile"
+                                id="pdfInput"
                                 accept=".pdf,application/pdf"
+                                hidden
                             >
 
-                            <button class="choose-btn" id="chooseFileBtn" type="button">
-                                Choose PDF File
-                            </button>
                         </div>
 
-                        <div class="selected-file" id="selectedFile"></div>
+                        <div
+                            class="selected-file"
+                            id="selectedFile"
+                        ></div>
 
-                        <button class="primary-btn" id="uploadPdfBtn" type="button">
-                            ⇧ &nbsp; Upload &amp; Extract PDF
-                        </button>
+                        <p class="helper-text">
+                            Text-based PDFs are supported.
+                            Scanned PDFs require OCR, which is not
+                            included in this version.
+                        </p>
+
+                        <div class="button-row">
+
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                id="pdfButton"
+                            >
+                                ✦ Extract PDF
+                            </button>
+
+                        </div>
+
                     </section>
-                </div>
-            </section>
 
-            <!-- Results -->
-            <section class="results-section" id="results">
-                <div class="section-heading">
-                    <div>
-                        <h2>Extraction Results</h2>
-                        <p>Your validated invoice information appears here.</p>
-                    </div>
+
+                    <!-- STATUS -->
+
+                    <div
+                        id="statusElement"
+                        class="status-message"
+                        role="status"
+                        aria-live="polite"
+                    ></div>
+
+                    <div
+                        id="pdfStatusElement"
+                        class="status-message"
+                        role="status"
+                        aria-live="polite"
+                    ></div>
+
                 </div>
 
-                <div class="results-card">
-                    <div class="results-header">
+            </div>
+
+
+            <!-- RESULTS CARD -->
+
+            <div class="card" id="results">
+
+                <div class="card-header">
+
+                    <div class="result-header">
+
                         <div>
                             <h3>Structured Output</h3>
                             <p>Invoice fields and raw JSON response</p>
                         </div>
-                        <div class="json-label">JSON · UTF-8</div>
+
                     </div>
 
-                    <div id="status" class="result-status" role="status" aria-live="polite"></div>
-                    <div id="pdfStatus" class="result-status" role="status" aria-live="polite"></div>
+                    <span class="format-badge">
+                        JSON · UTF-8
+                    </span>
 
-                    <div class="result-body">
-                        <div id="emptyState" class="empty-state">
-                            <span>▤</span>
-                            No extraction results yet.<br>
-                            Enter invoice text or upload a PDF to begin.
+                </div>
+
+
+                <div class="card-body">
+
+                    <!-- EMPTY STATE -->
+
+                    <div
+                        class="empty-state"
+                        id="emptyState"
+                    >
+
+                        <div class="empty-icon">{ }</div>
+
+                        <h4>Ready to extract</h4>
+
+                        <p>
+                            Your validated invoice fields and
+                            structured JSON will appear here.
+                        </p>
+
+                    </div>
+
+
+                    <!-- EXTRACTED FIELDS -->
+
+                    <div
+                        class="field-grid"
+                        id="fieldGrid"
+                        hidden
+                    ></div>
+
+
+                    <!-- JSON -->
+
+                    <div class="json-section">
+
+                        <div class="json-heading">
+
+                            <h4>JSON Preview</h4>
+
+                            <span>FORMATTED OUTPUT</span>
+
                         </div>
 
-                        <div id="fieldGrid" class="field-grid" hidden></div>
+                        <pre
+                            class="json-output"
+                            id="resultElement"
+                        ></pre>
 
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin:18px 0 10px;">
-                            <strong style="font-size:12px;">JSON Preview</strong>
-                            <button id="copyButton" class="secondary-btn" type="button" disabled>
+                        <div class="result-actions">
+
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                id="copyButton"
+                                disabled
+                            >
                                 Copy JSON
                             </button>
+
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                id="downloadButton"
+                                disabled
+                            >
+                                Download JSON
+                            </button>
+
                         </div>
 
-                        <pre id="result" class="json-output"></pre>
                     </div>
-                </div>
-            </section>
 
-            <footer class="footer">
-                InvoiceAI · Intelligent Invoice Data Extraction<br>
-                Python · FastAPI · Pydantic · Ollama
-            </footer>
-        </main>
-    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- FEATURES -->
+
+        <section class="info-section">
+
+            <div class="info-card">
+
+                <div class="icon">🤖</div>
+
+                <h4>Local AI Extraction</h4>
+
+                <p>
+                    Uses your local Ollama model to identify
+                    structured information from invoice content.
+                </p>
+
+            </div>
+
+            <div class="info-card">
+
+                <div class="icon">✓</div>
+
+                <h4>Data Validation</h4>
+
+                <p>
+                    Uses Pydantic validation to check required fields,
+                    data types, currency format, and date values.
+                </p>
+
+            </div>
+
+            <div class="info-card">
+
+                <div class="icon">{ }</div>
+
+                <h4>Structured JSON</h4>
+
+                <p>
+                    View, copy, and download extracted invoice data
+                    in a consistent JSON format.
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="footer">
+
+        <span>InvoiceAI · LLM JSON Invoice Extractor</span>
+
+        <span>Powered by FastAPI, Ollama & Pydantic</span>
+
+    </footer>
+
 </div>
 
+
 <script>
+    /* =====================================
+       CONFIGURATION
+    ===================================== */
+
     const API_URL = "http://127.0.0.1:8000";
 
-    const textButton = document.getElementById("extractButton");
-    const pdfButton = document.getElementById("uploadPdfBtn");
-    const pdfInput = document.getElementById("pdfFile");
-    const chooseFileButton = document.getElementById("chooseFileBtn");
+
+    /* =====================================
+       HTML ELEMENTS
+    ===================================== */
+
+    const textTab = document.getElementById("textTab");
+    const pdfTab = document.getElementById("pdfTab");
+
+    const textPanel = document.getElementById("textPanel");
+    const pdfPanel = document.getElementById("pdfPanel");
+
+    const invoiceText = document.getElementById("invoiceText");
+
+    const textButton = document.getElementById("textButton");
+    const pdfButton = document.getElementById("pdfButton");
+
+    const sampleButton = document.getElementById("sampleButton");
+
+    const pdfInput = document.getElementById("pdfInput");
+    const chooseFileButton = document.getElementById("chooseFileButton");
     const dropZone = document.getElementById("dropZone");
     const selectedFile = document.getElementById("selectedFile");
-    const statusElement = document.getElementById("status");
-    const pdfStatusElement = document.getElementById("pdfStatus");
-    const resultElement = document.getElementById("result");
-    const fieldGrid = document.getElementById("fieldGrid");
+
+    const statusElement = document.getElementById("statusElement");
+    const pdfStatusElement = document.getElementById("pdfStatusElement");
+
     const emptyState = document.getElementById("emptyState");
+    const fieldGrid = document.getElementById("fieldGrid");
+
+    const resultElement = document.getElementById("resultElement");
+
     const copyButton = document.getElementById("copyButton");
+    const downloadButton = document.getElementById("downloadButton");
+
+
+    /* =====================================
+       APPLICATION STATE
+    ===================================== */
 
     let latestInvoice = null;
 
+
+    /* =====================================
+       TAB SWITCHING
+    ===================================== */
+
+    function switchTab(tab) {
+
+        const showText = tab === "text";
+
+        textPanel.style.display = showText ? "block" : "none";
+        pdfPanel.style.display = showText ? "none" : "block";
+
+        textTab.classList.toggle("active", showText);
+        pdfTab.classList.toggle("active", !showText);
+
+        statusElement.style.display = "none";
+        pdfStatusElement.style.display = "none";
+
+        clearResults();
+    }
+
+    textTab.addEventListener("click", () => {
+        switchTab("text");
+    });
+
+    pdfTab.addEventListener("click", () => {
+        switchTab("pdf");
+    });
+
+
+    /* =====================================
+       STATUS MESSAGES
+    ===================================== */
+
+    function showStatus(element, message, type = "info") {
+
+        element.textContent = message;
+        element.className = "status-message " + type;
+    }
+
+
+    function hideStatus(element) {
+
+        element.textContent = "";
+        element.className = "status-message";
+    }
+
+
+    /* =====================================
+       BUTTON LOADING STATE
+    ===================================== */
+
     function setBusy(button, busy, label) {
-        button.disabled = busy;
+
         if (busy) {
-            button.dataset.originalLabel = button.textContent;
+
+            if (!button.dataset.originalLabel) {
+                button.dataset.originalLabel = button.textContent;
+            }
+
+            button.disabled = true;
             button.textContent = label;
-        } else if (button.dataset.originalLabel) {
-            button.textContent = button.dataset.originalLabel;
+
+        } else {
+
+            button.disabled = false;
+
+            if (button.dataset.originalLabel) {
+                button.textContent = button.dataset.originalLabel;
+            }
         }
     }
 
+
+    /* =====================================
+       CLEAR PREVIOUS RESULTS
+    ===================================== */
+
+    function clearResults() {
+
+        latestInvoice = null;
+
+        fieldGrid.replaceChildren();
+        fieldGrid.hidden = true;
+
+        emptyState.hidden = false;
+
+        resultElement.textContent = "";
+        resultElement.style.display = "none";
+
+        copyButton.disabled = true;
+        downloadButton.disabled = true;
+    }
+
+
+    /* =====================================
+       DISPLAY VALIDATED INVOICE
+    ===================================== */
+
     function showResult(invoice) {
+
+        if (!invoice || typeof invoice !== "object") {
+            throw new Error("The server returned an invalid invoice response.");
+        }
+
         latestInvoice = invoice;
 
         emptyState.hidden = true;
@@ -973,6 +1239,7 @@
         ];
 
         for (const [label, value] of fields) {
+
             const item = document.createElement("div");
             item.className = "field-item";
 
@@ -982,7 +1249,11 @@
 
             const fieldValue = document.createElement("div");
             fieldValue.className = "field-value";
-            fieldValue.textContent = value ?? "Not provided";
+
+            fieldValue.textContent =
+                value === null || value === undefined || value === ""
+                    ? "Not provided"
+                    : String(value);
 
             item.append(fieldLabel, fieldValue);
             fieldGrid.appendChild(item);
@@ -990,7 +1261,9 @@
 
         resultElement.textContent = JSON.stringify(invoice, null, 4);
         resultElement.style.display = "block";
+
         copyButton.disabled = false;
+        downloadButton.disabled = false;
 
         document.getElementById("results").scrollIntoView({
             behavior: "smooth",
@@ -998,95 +1271,265 @@
         });
     }
 
+
+    /* =====================================
+       USER-FRIENDLY BACKEND ERRORS
+    ===================================== */
+
     function showErrorMessage(data) {
+        if (!data || typeof data !== "object") {
+            return "Something went wrong. Please try again.";
+        }
+
         if (typeof data.detail === "string") {
             return data.detail;
         }
 
-        if (data.detail) {
-            return JSON.stringify(data.detail);
+        if (Array.isArray(data.detail)) {
+            const fieldNames = {
+                invoice_number: "Invoice Number",
+                customer_name: "Customer Name",
+                total_amount: "Total Amount",
+                currency: "Currency",
+                due_date: "Due Date"
+            };
+
+            const fields = data.detail
+                .filter(error => error.type !== "extra_forbidden")
+                .map(error => {
+                    const location = Array.isArray(error.loc) ? error.loc : [];
+                    const field = location[location.length - 1];
+                    return fieldNames[field] || null;
+                })
+                .filter(Boolean);
+
+            const uniqueFields = [...new Set(fields)];
+
+            if (uniqueFields.length > 0) {
+                return "Invoice validation failed. Missing or invalid fields: "
+                    + uniqueFields.join(", ")
+                    + ". Please provide the correct details and try again.";
+            }
+
+            return "The invoice could not be validated. Please check the invoice details and try again.";
         }
 
-        return "The request could not be completed.";
+        return "Something went wrong while processing the invoice. Please try again.";
     }
 
+    /* =====================================
+       SAFE JSON RESPONSE READER
+    ===================================== */
+
+    async function readResponse(response) {
+
+        let data;
+
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error(
+                "The server returned an invalid response. Please try again."
+            );
+        }
+
+        if (!response.ok) {
+
+            throw new Error(showErrorMessage(data));
+        }
+
+        return data;
+    }
+
+
+    /* =====================================
+       TEXT INVOICE EXTRACTION
+    ===================================== */
+
     async function extractInvoice() {
-        const invoiceText = document.getElementById("invoiceText").value.trim();
 
-        statusElement.textContent = "";
-        pdfStatusElement.textContent = "";
+        const text = invoiceText.value.trim();
 
-        if (!invoiceText) {
-            statusElement.textContent = "Please enter invoice text first.";
+        hideStatus(statusElement);
+        hideStatus(pdfStatusElement);
+
+        if (!text) {
+
+            showStatus(
+                statusElement,
+                "Please enter invoice text first.",
+                "error"
+            );
+
             return;
         }
 
+        clearResults();
+
         setBusy(textButton, true, "Processing with AI...");
-        statusElement.textContent = "Sending invoice text to your local AI model...";
+
+        showStatus(
+            statusElement,
+            "Sending invoice text to your local AI model...",
+            "info"
+        );
 
         try {
+
             const response = await fetch(`${API_URL}/extract`, {
+
                 method: "POST",
+
                 headers: {
                     "Content-Type": "application/json"
                 },
+
                 body: JSON.stringify({
-                    invoice_text: invoiceText
+                    invoice_text: text
                 })
+
             });
 
-            const data = await response.json();
+            const data = await readResponse(response);
 
-            if (!response.ok) {
-                throw new Error(showErrorMessage(data));
+            if (!data.invoice) {
+                throw new Error("The server did not return invoice data.");
             }
 
             showResult(data.invoice);
-            statusElement.textContent = "✓ Text invoice extracted and validated successfully.";
+
+            showStatus(
+                statusElement,
+                "✓ Text invoice extracted and validated successfully.",
+                "success"
+            );
+
         } catch (error) {
-            statusElement.textContent = "Error: " + error.message;
+
+            clearResults();
+
+            console.error("Text extraction error:", error);
+
+            if (error instanceof TypeError) {
+
+                showStatus(
+                    statusElement,
+                    "Cannot connect to the backend. Check that FastAPI is running at http://127.0.0.1:8000.",
+                    "error"
+                );
+
+            } else {
+
+                showStatus(
+                    statusElement,
+                    "Extraction failed: " + error.message,
+                    "error"
+                );
+            }
+
+            statusElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
         } finally {
+
             setBusy(textButton, false);
         }
     }
 
+
+    /* =====================================
+       SAMPLE INVOICE
+    ===================================== */
+
+    sampleButton.addEventListener("click", () => {
+
+        invoiceText.value =
+`Invoice Number: INV-5003
+Customer Name: Blue Sky Technologies
+Total Amount: 12500.50
+Currency: INR
+Due Date: 2026-12-15`;
+
+        hideStatus(statusElement);
+        hideStatus(pdfStatusElement);
+
+        clearResults();
+    });
+
+
+    /* =====================================
+       PDF FILE SELECTION
+    ===================================== */
+
     function selectPdf(file) {
+
         if (!file) {
             return;
         }
 
-        if (!file.name.toLowerCase().endsWith(".pdf")) {
-            pdfStatusElement.textContent = "Please select a PDF file.";
+        const isPdf =
+            file.name.toLowerCase().endsWith(".pdf") ||
+            file.type === "application/pdf";
+
+        if (!isPdf) {
+
+            showStatus(
+                pdfStatusElement,
+                "Please select a PDF file.",
+                "error"
+            );
+
             pdfInput.value = "";
             selectedFile.style.display = "none";
+
             return;
         }
 
-        pdfInput.files;
-        selectedFile.textContent = "Selected file: " + file.name;
+        selectedFile.textContent =
+            "Selected file: " + file.name;
+
         selectedFile.style.display = "block";
-        pdfStatusElement.textContent = "";
+
+        hideStatus(pdfStatusElement);
     }
 
+
     chooseFileButton.addEventListener("click", () => {
+
         pdfInput.click();
     });
 
+
     pdfInput.addEventListener("change", () => {
+
         selectPdf(pdfInput.files[0]);
     });
 
-    dropZone.addEventListener("dragover", (event) => {
+
+    /* =====================================
+       DRAG AND DROP PDF
+    ===================================== */
+
+    dropZone.addEventListener("dragover", event => {
+
         event.preventDefault();
+
         dropZone.classList.add("dragover");
     });
 
+
     dropZone.addEventListener("dragleave", () => {
+
         dropZone.classList.remove("dragover");
     });
 
-    dropZone.addEventListener("drop", (event) => {
+
+    dropZone.addEventListener("drop", event => {
+
         event.preventDefault();
+
         dropZone.classList.remove("dragover");
 
         const file = event.dataTransfer.files[0];
@@ -1095,75 +1538,216 @@
             return;
         }
 
-        if (!file.name.toLowerCase().endsWith(".pdf")) {
-            pdfStatusElement.textContent = "Please drop a PDF file.";
+        const isPdf =
+            file.name.toLowerCase().endsWith(".pdf") ||
+            file.type === "application/pdf";
+
+        if (!isPdf) {
+
+            showStatus(
+                pdfStatusElement,
+                "Please drop a PDF file.",
+                "error"
+            );
+
             return;
         }
 
         const transfer = new DataTransfer();
+
         transfer.items.add(file);
+
         pdfInput.files = transfer.files;
+
         selectPdf(file);
     });
 
+
+    /* =====================================
+       PDF EXTRACTION
+    ===================================== */
+
     async function uploadPdf() {
+
         const file = pdfInput.files[0];
 
-        statusElement.textContent = "";
-        pdfStatusElement.textContent = "";
+        hideStatus(statusElement);
+        hideStatus(pdfStatusElement);
 
         if (!file) {
-            pdfStatusElement.textContent = "Please choose a PDF file first.";
+
+            showStatus(
+                pdfStatusElement,
+                "Please choose a PDF file first.",
+                "error"
+            );
+
             return;
         }
 
         const formData = new FormData();
+
         formData.append("file", file);
 
+        clearResults();
+
         setBusy(pdfButton, true, "Processing PDF...");
-        pdfStatusElement.textContent = "Reading PDF and processing with local AI...";
+
+        showStatus(
+            pdfStatusElement,
+            "Reading PDF and processing with local AI...",
+            "info"
+        );
 
         try {
-            const response = await fetch(`${API_URL}/extract-pdf`, {
-                method: "POST",
-                body: formData
-            });
 
-            const data = await response.json();
+            const response = await fetch(
+                `${API_URL}/extract-pdf`,
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
 
-            if (!response.ok) {
-                throw new Error(showErrorMessage(data));
+            const data = await readResponse(response);
+
+            if (!data.invoice) {
+                throw new Error("The server did not return invoice data.");
             }
 
             showResult(data.invoice);
-            pdfStatusElement.textContent = "✓ PDF invoice extracted and validated successfully.";
+
+            showStatus(
+                pdfStatusElement,
+                "✓ PDF invoice extracted and validated successfully.",
+                "success"
+            );
+
         } catch (error) {
-            pdfStatusElement.textContent = "Error: " + error.message;
+
+            clearResults();
+
+            console.error("PDF extraction error:", error);
+
+            if (error instanceof TypeError) {
+
+                showStatus(
+                    pdfStatusElement,
+                    "Cannot connect to the backend. Check that FastAPI is running at http://127.0.0.1:8000.",
+                    "error"
+                );
+
+            } else {
+
+                showStatus(
+                    pdfStatusElement,
+                    "PDF extraction failed: " + error.message,
+                    "error"
+                );
+            }
+
+            pdfStatusElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
         } finally {
+
             setBusy(pdfButton, false);
         }
     }
 
+
+    /* =====================================
+       COPY JSON
+    ===================================== */
+
     copyButton.addEventListener("click", async () => {
+
         if (!latestInvoice) {
             return;
         }
 
         try {
+
             await navigator.clipboard.writeText(
                 JSON.stringify(latestInvoice, null, 4)
             );
+
             copyButton.textContent = "Copied!";
+
             setTimeout(() => {
+
                 copyButton.textContent = "Copy JSON";
+
             }, 1500);
-        } catch {
-            copyButton.textContent = "Copy unavailable";
+
+        } catch (error) {
+
+            console.error("Copy error:", error);
+
+            showStatus(
+                statusElement,
+                "Clipboard access failed. You can select and copy the JSON manually.",
+                "error"
+            );
         }
     });
 
+
+    /* =====================================
+       DOWNLOAD JSON
+    ===================================== */
+
+    downloadButton.addEventListener("click", () => {
+
+        if (!latestInvoice) {
+            return;
+        }
+
+        const json = JSON.stringify(latestInvoice, null, 4);
+
+        const blob = new Blob(
+            [json],
+            { type: "application/json;charset=utf-8" }
+        );
+
+        const url = URL.createObjectURL(blob);
+
+        const invoiceNumber =
+            String(latestInvoice.invoice_number || "invoice")
+                .replace(/[^a-zA-Z0-9_-]/g, "_");
+
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `${invoiceNumber}.json`;
+
+        document.body.appendChild(link);
+
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+    });
+
+
+    /* =====================================
+       BUTTON EVENTS
+    ===================================== */
+
     textButton.addEventListener("click", extractInvoice);
+
     pdfButton.addEventListener("click", uploadPdf);
+
+
+    /* =====================================
+       INITIAL STATE
+    ===================================== */
+
+    clearResults();
+
 </script>
+
 </body>
 </html>
